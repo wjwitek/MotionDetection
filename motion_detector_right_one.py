@@ -37,16 +37,17 @@ while True:
     threshold_frame = cv2.dilate(threshold_frame, None, iterations = 2)
 
     (cntr,_) = cv2.findContours(threshold_frame.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    check = 0
     for contour in cntr:
         # if area of movement is too small ignore it
         if cv2.contourArea(contour) < detected_area_size:
             continue
+        check = 1
         (x, y, w, h) = cv2.boundingRect(contour)
         cv2.rectangle(frame, (x,y), (x+w, y+h), (0, 255, 0), 3)
     
-    cv2.rectangle(full_img, (cut[0], cut[1]), (cut[2], cut[3]), (0, 0, 255), 3)
-    cv2.putText(img=full_img, text='Press q to exit', org=(5, 25), fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1, color=(100, 20, 100),thickness=3)
+    cv2.rectangle(full_img, (cut[0], cut[1]), (cut[2], cut[3]), (0, 255*check, 255), 3)
+    cv2.putText(img=full_img, text='Press q to exit', org=(5, 25), fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1, color=(100, 255, 100),thickness=3)
 
     cv2.imshow("window name - press 'q' to exit", full_img)
     key = cv2.waitKey(1)
