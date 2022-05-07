@@ -11,7 +11,7 @@ def image_resize(width, original):
 
 
 class MotionDetector:
-    def __init__(self, source=0, mask=(0.1, 0.1, 0.9, 0.7), noise_threshold=10000000, detected_area_size=1000, debug=False):
+    def __init__(self, source=0, mask=(0.1, 0.1, 0.9, 0.7), noise_threshold=50, detected_area_size=1000, debug=False):
         self.source = source
         self.noise_threshold = noise_threshold
         self.detected_area_size = detected_area_size
@@ -89,7 +89,7 @@ class MotionDetector:
             delta_frame = cv2.absdiff(self.first_frame, blur)
 
             # set pixels with value lower than threshold to 0
-            threshold_frame = cv2.threshold(delta_frame, 50, 255, cv2.THRESH_BINARY)[1]
+            threshold_frame = cv2.threshold(delta_frame, self.noise_threshold, 255, cv2.THRESH_BINARY)[1]
 
             # dilate image,  iteration = (bigger values catches more noises)
             threshold_frame = cv2.dilate(threshold_frame, None, iterations=2)
@@ -164,8 +164,8 @@ class MotionDetector:
         self.queue.put(("area", new_area))
 
 
-if __name__ == "__main__":
-    test = MotionDetector(source=0)
-    test.start()
-    time.sleep(2)
-    test.change_minimal_detected_area(10000)
+# if __name__ == "__main__":
+#     test = MotionDetector(source=0)
+#     test.start()
+#     time.sleep(2)
+#     test.change_sensitivity(500)
