@@ -35,6 +35,7 @@ class MotionDetector:
 
         while True:
             mask_changed = False
+            mode_changed = False
             # check if queue is empty
             if not queue.empty():
                 arg = queue.get()
@@ -43,7 +44,7 @@ class MotionDetector:
                     mask_changed = True
                 elif arg[0] == "mode":
                     self.debug = arg[1]
-                    self.first_frame = image_resize(500, self.first_frame)
+                    mode_changed = True
                     cv2.destroyAllWindows()
                 elif arg[0] == "sens":
                     self.noise_threshold = arg[1]
@@ -64,6 +65,12 @@ class MotionDetector:
                 int(self.mask[3] * frame.shape[0]))
 
             full_img = frame
+
+            if mode_changed:
+                self.first_frame = image_resize(500, original_first_frame)
+                self.first_frame = original_first_frame[cut[1]:cut[3], cut[0]:cut[2]]
+                self.first_frame = cv2.cvtColor(self.first_frame, cv2.COLOR_BGR2GRAY)
+                self.first_frame = cv2.GaussianBlur(self.first_frame, (21, 21), 0)
 
             if mask_changed:
                 self.first_frame = original_first_frame[cut[1]:cut[3], cut[0]:cut[2]]
@@ -168,4 +175,6 @@ class MotionDetector:
 #     test = MotionDetector(source=0)
 #     test.start()
 #     time.sleep(2)
-#     test.change_sensitivity(500)
+#     test.change_mask((0.5, 0.1, 0.9, 0.7))
+#     time.sleep(4)
+#     test.change_mode(True)
