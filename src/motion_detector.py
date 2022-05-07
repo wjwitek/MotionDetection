@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import multiprocessing
 
@@ -18,15 +20,28 @@ class MotionDetector:
         self.stream = None
         self.first_frame = None
         self.proc = None
+        self.queue = None
 
     def stop(self):
         self.stream.release()
         cv2.destroyAllWindows()
 
-    def main_loop(self):
+    def main_loop(self, *args):
+        queue = args[0]
         # start capturing video stream
         self.stream = cv2.VideoCapture(self.source)
+
+        original_first_frame = None
+
         while True:
+            mask_changed = False
+            # check if queue is empty
+            if not queue.empty():
+                arg = queue.get()
+                if arg[0] == "mask":
+                    self.mask = arg[1]
+                    mask_changed = True
+
             # read from stream
             check, frame = self.stream.read()
 
@@ -42,6 +57,11 @@ class MotionDetector:
 
             full_img = frame
 
+            if mask_changed:
+                self.first_frame = original_first_frame[cut[1]:cut[3], cut[0]:cut[2]]
+                self.first_frame = cv2.cvtColor(self.first_frame, cv2.COLOR_BGR2GRAY)
+                self.first_frame = cv2.GaussianBlur(self.first_frame, (21, 21), 0)
+
             # cut image to leave only part where movement is detected
             frame = frame[cut[1]:cut[3], cut[0]:cut[2]]
 
@@ -54,6 +74,7 @@ class MotionDetector:
             # set reference frame
             if self.first_frame is None:
                 self.first_frame = blur
+                original_first_frame = full_img
                 continue
 
             # calculate difference between reference frame and current frame
@@ -110,13 +131,9 @@ class MotionDetector:
 
     def start(self):
         # start main loop
-        self.proc = multiprocessing.Process(target=self.main_loop)
+        self.queue = multiprocessing.Queue()
+        self.proc = multiprocessing.Process(target=self.main_loop, args=(self.queue, ))
         self.proc.start()
-        while True and self.proc.is_alive():
-            key = cv2.waitKey(1)
-            if key == ord('q'):
-                self.proc.terminate()
-                break
 
     def restart(self):
         self.proc.terminate()
@@ -128,18 +145,15 @@ class MotionDetector:
 
     def change_mask(self, new_mask):
         self.mask = new_mask
-        self.restart()
+        self.queue.put(("mask", new_mask))
 
     def change_sensitivity(self, new_sensitivity):
         self.noise_threshold = new_sensitivity
         self.restart()
 
-    def change_source(self, new_source):
-        self.source = new_source
-        self.restart()
 
-
-# if __name__ == "__main__":
-#     test = MotionDetector()
-#     test.start()
-
+if __name__ == "__main__":
+    test = MotionDetector(0)
+    test.start()
+    time.sleep(4)
+    test.change_mask((0.5, 0.1, 0.9, 0.7))
