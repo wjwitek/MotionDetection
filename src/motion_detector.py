@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import multiprocessing
 
@@ -9,7 +11,7 @@ def image_resize(width, original):
 
 
 class MotionDetector:
-    def __init__(self, source=0, mask=(0.1, 0.1, 0.9, 0.7), noise_threshold=10000000, detected_area_size=1000, debug=False):
+    def __init__(self, source=0, mask=(0.1, 0.1, 0.9, 0.7), noise_threshold=50, detected_area_size=1000, debug=False):
         self.source = source
         self.noise_threshold = noise_threshold
         self.detected_area_size = detected_area_size
@@ -18,15 +20,37 @@ class MotionDetector:
         self.stream = None
         self.first_frame = None
         self.proc = None
+        self.queue = None
 
     def stop(self):
         self.stream.release()
         cv2.destroyAllWindows()
 
-    def main_loop(self):
+    def main_loop(self, *args):
+        queue = args[0]
         # start capturing video stream
         self.stream = cv2.VideoCapture(self.source)
+
+        original_first_frame = None
+
         while True:
+            mask_changed = False
+            mode_changed = False
+            # check if queue is empty
+            if not queue.empty():
+                arg = queue.get()
+                if arg[0] == "mask":
+                    self.mask = arg[1]
+                    mask_changed = True
+                elif arg[0] == "mode":
+                    self.debug = arg[1]
+                    mode_changed = True
+                    cv2.destroyAllWindows()
+                elif arg[0] == "sens":
+                    self.noise_threshold = arg[1]
+                elif arg[0] == "area":
+                    self.detected_area_size = arg[1]
+
             # read from stream
             check, frame = self.stream.read()
 
@@ -42,6 +66,17 @@ class MotionDetector:
 
             full_img = frame
 
+            if mode_changed:
+                self.first_frame = image_resize(500, original_first_frame)
+                self.first_frame = original_first_frame[cut[1]:cut[3], cut[0]:cut[2]]
+                self.first_frame = cv2.cvtColor(self.first_frame, cv2.COLOR_BGR2GRAY)
+                self.first_frame = cv2.GaussianBlur(self.first_frame, (21, 21), 0)
+
+            if mask_changed:
+                self.first_frame = original_first_frame[cut[1]:cut[3], cut[0]:cut[2]]
+                self.first_frame = cv2.cvtColor(self.first_frame, cv2.COLOR_BGR2GRAY)
+                self.first_frame = cv2.GaussianBlur(self.first_frame, (21, 21), 0)
+
             # cut image to leave only part where movement is detected
             frame = frame[cut[1]:cut[3], cut[0]:cut[2]]
 
@@ -54,13 +89,14 @@ class MotionDetector:
             # set reference frame
             if self.first_frame is None:
                 self.first_frame = blur
+                original_first_frame = full_img
                 continue
 
             # calculate difference between reference frame and current frame
             delta_frame = cv2.absdiff(self.first_frame, blur)
 
             # set pixels with value lower than threshold to 0
-            threshold_frame = cv2.threshold(delta_frame, 50, 255, cv2.THRESH_BINARY)[1]
+            threshold_frame = cv2.threshold(delta_frame, self.noise_threshold, 255, cv2.THRESH_BINARY)[1]
 
             # dilate image,  iteration = (bigger values catches more noises)
             threshold_frame = cv2.dilate(threshold_frame, None, iterations=2)
@@ -110,36 +146,35 @@ class MotionDetector:
 
     def start(self):
         # start main loop
-        self.proc = multiprocessing.Process(target=self.main_loop)
+        self.queue = multiprocessing.Queue()
+        self.proc = multiprocessing.Process(target=self.main_loop, args=(self.queue, ))
         self.proc.start()
-        while True and self.proc.is_alive():
-            key = cv2.waitKey(1)
-            if key == ord('q'):
-                self.proc.terminate()
-                break
 
     def restart(self):
         self.proc.terminate()
         self.start()
 
-    def change_mode(self, debug=True):
+    def change_mode(self, debug):
         self.debug = debug
-        self.restart()
+        self.queue.put(("mode", debug))
 
     def change_mask(self, new_mask):
         self.mask = new_mask
-        self.restart()
+        self.queue.put(("mask", new_mask))
 
     def change_sensitivity(self, new_sensitivity):
         self.noise_threshold = new_sensitivity
-        self.restart()
+        self.queue.put(("sens", new_sensitivity))
 
-    def change_source(self, new_source):
-        self.source = new_source
-        self.restart()
+    def change_minimal_detected_area(self, new_area):
+        self.detected_area_size = new_area
+        self.queue.put(("area", new_area))
 
 
 # if __name__ == "__main__":
-#     test = MotionDetector()
+#     test = MotionDetector(source=0)
 #     test.start()
-
+#     time.sleep(2)
+#     test.change_mask((0.5, 0.1, 0.9, 0.7))
+#     time.sleep(4)
+#     test.change_mode(True)
