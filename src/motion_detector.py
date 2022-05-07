@@ -41,6 +41,14 @@ class MotionDetector:
                 if arg[0] == "mask":
                     self.mask = arg[1]
                     mask_changed = True
+                elif arg[0] == "mode":
+                    self.debug = arg[1]
+                    self.first_frame = image_resize(500, self.first_frame)
+                    cv2.destroyAllWindows()
+                elif arg[0] == "sens":
+                    self.noise_threshold = arg[1]
+                elif arg[0] == "area":
+                    self.detected_area_size = arg[1]
 
             # read from stream
             check, frame = self.stream.read()
@@ -139,9 +147,9 @@ class MotionDetector:
         self.proc.terminate()
         self.start()
 
-    def change_mode(self, debug=True):
+    def change_mode(self, debug):
         self.debug = debug
-        self.restart()
+        self.queue.put(("mode", debug))
 
     def change_mask(self, new_mask):
         self.mask = new_mask
@@ -149,11 +157,15 @@ class MotionDetector:
 
     def change_sensitivity(self, new_sensitivity):
         self.noise_threshold = new_sensitivity
-        self.restart()
+        self.queue.put(("sens", new_sensitivity))
+
+    def change_minimal_detected_area(self, new_area):
+        self.detected_area_size = new_area
+        self.queue.put(("area", new_area))
 
 
 if __name__ == "__main__":
-    test = MotionDetector(0)
+    test = MotionDetector(source=0)
     test.start()
-    time.sleep(4)
-    test.change_mask((0.5, 0.1, 0.9, 0.7))
+    time.sleep(2)
+    test.change_minimal_detected_area(10000)
