@@ -50,6 +50,14 @@ class MotionDetector:
                     self.noise_threshold = arg[1]
                 elif arg[0] == "area":
                     self.detected_area_size = arg[1]
+                elif arg[0] == "reference":
+                    original_first_frame = None
+                    self.first_frame = None
+                elif arg[0] == "source":
+                    self.stream.release()
+                    self.stream = cv2.VideoCapture(arg[1])
+                    original_first_frame = None
+                    self.first_frame = None
 
             # read from stream
             check, frame = self.stream.read()
@@ -139,7 +147,7 @@ class MotionDetector:
                 # main image
                 cv2.imshow("Image detection", full_img)
                 cv2.moveWindow("Image detection", 600, 300)
-            key = cv2.waitKey(1)
+            key = cv2.waitKey(33)
             if key == ord('q'):
                 self.stop()
                 break
@@ -170,6 +178,11 @@ class MotionDetector:
         self.detected_area_size = new_area
         self.queue.put(("area", new_area))
 
+    def set_reference_frame(self):
+        self.queue.put(("reference",))
+
+    def change_source(self, new_source):
+        self.queue.put(("source", new_source))
 
 # if __name__ == "__main__":
 #     test = MotionDetector(source=0)

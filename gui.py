@@ -5,19 +5,19 @@ from threading import Thread
 from src.motion_detector import MotionDetector
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
 
 
 class Gui:
     def __init__(self):
         self.root = tk.Tk()
+        self.source = 0
         tk.Grid.columnconfigure(self.root, 0, weight=1)
         self.root.title("GUI")
-        self.root.geometry("500x500")
+        self.root.geometry("500x500+20000+0")
 
         self.root.bind("q", lambda e: self.root.destroy())
         self.mode = "normal"
-        self.detector = MotionDetector(mask=[0,0,1,1])
+        self.detector = MotionDetector(mask=[0, 0, 1, 1])
 
         self.t_slider = ttk.Scale(self.root, from_=0, to=200, value=50, orient=tk.HORIZONTAL,
                                   command=self.slider_changed)
@@ -37,7 +37,18 @@ class Gui:
 
         self.mode_button = ttk.Button(self.root, text="Debug", command=self.change_mode)
         self.mode_button.grid(row=2, column=0, sticky=tk.W)
+        self.set_reference_button = ttk.Button(self.root, text="Set reference frame", command=self.set_reference)
+        self.set_reference_button.grid(row=2, column=0, sticky=tk.E)
 
+
+        self.source_label = ttk.Label(self.root, text="Set source. 0 for webcam, orangutan.mp4 for orangutan \n <video_path> for any other video file")
+        self.source_label.grid(row=8, column=0, sticky=tk.W, columnspan=2, rowspan=2)
+        self.source_text_box = tk.Text(self.root, height=1)
+        self.source_text_box.insert("end-1c", "orangutan.mp4")
+        self.source_text_box.grid(row=10, column=0, sticky=tk.W)
+
+        self.change_source_button = ttk.Button(self.root, text="Change source", command=self.change_source)
+        self.change_source_button.grid(row=11, column=0, sticky=tk.W)
         self.box_sliders = []
         self.box_sliders_labels = []
         for i in range(4):
@@ -48,13 +59,29 @@ class Gui:
             )
             labels = ["X", "Y", "X2", "Y2"]
             if i < 2:
-                label =ttk.Label(self.root, text=f"{labels[i]}: 0")
+                label = ttk.Label(self.root, text=f"{labels[i]}: 0")
             else:
-                label =ttk.Label(self.root, text=f"{labels[i]}: 1")
+                label = ttk.Label(self.root, text=f"{labels[i]}: 1")
 
             self.box_sliders_labels.append(label)
             self.box_sliders[i].grid(row=i + 4, column=0, sticky=tk.W + tk.E)
             self.box_sliders_labels[i].grid(row=i + 4, column=1, sticky=tk.W)
+
+    def change_source(self):
+        try:
+            self.source = int(self.source_text_box.get("1.0", tk.END))
+        except ValueError:
+            self.source = 0
+            if self.source_text_box.get("1.0", tk.END) == "":
+                self.source = 0
+            else:
+                self.source = self.source_text_box.get("1.0", tk.END).strip()
+        print(self.source)
+        print(self.source)
+        self.detector.change_source(self.source)
+
+    def set_reference(self):
+        self.detector.set_reference_frame()
 
     def area_slider_changed(self, value):
         self.area_value = int(float(value))
@@ -114,7 +141,4 @@ class Gui:
 
 if __name__ == "__main__":
     gui = Gui()
-
     gui.run()
-
-    print("End")
