@@ -15,7 +15,7 @@ class Gui:
         self.root.title("GUI")
         self.root.geometry("500x500+20000+0")
 
-        self.root.bind("q", lambda e: self.root.destroy())
+        self.root.bind("q", lambda e: self.exit())
         self.mode = "normal"
         self.detector = MotionDetector(mask=[0, 0, 1, 1])
 
@@ -28,9 +28,9 @@ class Gui:
         self.t_slider.grid(row=0, column=0, sticky=tk.W + tk.E)
         self.t_slider_label.grid(row=0, column=1, sticky=tk.W)
 
-        self.area_slider = ttk.Scale(self.root, from_=100, to=20000, orient=tk.HORIZONTAL,
+        self.area_slider = ttk.Scale(self.root, from_=1, to=20000, value=100, orient=tk.HORIZONTAL,
                                      command=self.area_slider_changed)
-        self.area_slider_label = ttk.Label(self.root, text="Area: 0")
+        self.area_slider_label = ttk.Label(self.root, text="Area: 100")
         self.area_slider_label.grid(row=1, column=1, sticky=tk.W)
         self.area_slider.grid(row=1, column=0, sticky=tk.W + tk.E)
         self.area_value = 0
@@ -66,7 +66,9 @@ class Gui:
             self.box_sliders_labels.append(label)
             self.box_sliders[i].grid(row=i + 4, column=0, sticky=tk.W + tk.E)
             self.box_sliders_labels[i].grid(row=i + 4, column=1, sticky=tk.W)
-
+    def exit(self):
+        self.detector.stop()
+        self.root.destroy()
     def change_source(self):
         try:
             self.source = int(self.source_text_box.get("1.0", tk.END))

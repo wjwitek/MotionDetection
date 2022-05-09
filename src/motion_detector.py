@@ -58,6 +58,9 @@ class MotionDetector:
                     self.stream = cv2.VideoCapture(arg[1])
                     original_first_frame = None
                     self.first_frame = None
+                elif arg[0] == "stop":
+                    cv2.destroyAllWindows()
+                    break
 
             # read from stream
             check, frame = self.stream.read()
@@ -148,9 +151,6 @@ class MotionDetector:
                 cv2.imshow("Image detection", full_img)
                 cv2.moveWindow("Image detection", 600, 300)
             key = cv2.waitKey(33)
-            if key == ord('q'):
-                self.stop()
-                break
 
     def start(self):
         # start main loop
@@ -183,6 +183,9 @@ class MotionDetector:
 
     def change_source(self, new_source):
         self.queue.put(("source", new_source))
+
+    def stop(self):
+        self.queue.put(("stop",))
 
 # if __name__ == "__main__":
 #     test = MotionDetector(source=0)
