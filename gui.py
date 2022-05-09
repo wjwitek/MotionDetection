@@ -14,6 +14,9 @@ class Gui:
         tk.Grid.columnconfigure(self.root, 0, weight=1)
         self.root.title("GUI")
         self.root.geometry("500x500+20000+0")
+        # On window exit run the exit() method
+        self.root.protocol("WM_DELETE_WINDOW", self.exit)
+        
 
         self.root.bind("q", lambda e: self.exit())
         self.mode = "normal"
